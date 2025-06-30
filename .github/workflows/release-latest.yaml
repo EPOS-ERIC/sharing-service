@@ -21,11 +21,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jar-artifact
-          path: ${{ github.workspace }}/resources-service/target/*.jar
+          path: ${{ github.workspace }}/sharing-service/target/*.jar
           retention-days: 1
       - name: Docker build
         run: |
-          docker build . -t epos/resources-service:latest
+          docker build . -t epos/sharing-service:latest
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
@@ -33,4 +33,4 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Docker push
         run: |
-          docker push epos/resources-service:latest
+          docker push epos/sharing-service:latest
