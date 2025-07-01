@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.Objects;
 
 @Entity
-@Table(name = "configurations")
+@Table(name = "configurations", schema = "sharing_catalogue")
 @NamedQueries({
         @NamedQuery(name = "configurations.findAll", query = "SELECT c FROM Configurations c"),
         @NamedQuery(name = "configurations.findById", query = "SELECT c FROM Configurations c where c.id = :ID")
