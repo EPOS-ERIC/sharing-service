@@ -46,7 +46,7 @@ public class ShareApiController implements ShareApi {
         
         String key = body.getId()!=null? body.getId() : UUID.randomUUID().toString();
         
-        // If the configuration is encrypted, decrypt it before storing
+        // If the configuration is decrypted, decrypt it before storing
         String configValue = body.getConfiguration();
         if (AESUtil.isEncrypted(configValue)) {
             log.info("Configuration is encrypted, decrypting before storage");
@@ -63,7 +63,7 @@ public class ShareApiController implements ShareApi {
 		return ResponseEntity.ok(keyCreated);
     }
 
-    public ResponseEntity<ModelConfiguration> findConfigurationsByID(@Parameter(in = ParameterIn.PATH, description = "Status values that need to be considered for filter", required=true, schema=@Schema()) @PathVariable("instance_id") String configuration
+    public ResponseEntity<String> findConfigurationsByID(@Parameter(in = ParameterIn.PATH, description = "Status values that need to be considered for filter", required=true, schema=@Schema()) @PathVariable("instance_id") String configuration
 ) {
         
         String configurationValue = ConfigurationMethod.getConfigurationById(configuration).getConfiguration();
@@ -71,7 +71,7 @@ public class ShareApiController implements ShareApi {
         ModelConfiguration modelConfiguration = new ModelConfiguration();
         modelConfiguration.setConfiguration(configurationValue);
         
-        return ResponseEntity.ok(modelConfiguration);
+        return ResponseEntity.ok(modelConfiguration.getConfiguration());
     }
 
     public ResponseEntity<List<Configuration>> findAllConfigurations() {
@@ -101,25 +101,25 @@ public class ShareApiController implements ShareApi {
             return ResponseEntity.ok(new ArrayList<>());
         }
         
-        List<ModelConfiguration> encryptedConfigs = new ArrayList<>();
+        List<ModelConfiguration> decryptedConfigs = new ArrayList<>();
         for (Configuration config : configs) {
             ModelConfiguration modelConfig = new ModelConfiguration();
             modelConfig.setId(config.getId());
             modelConfig.setConfiguration(AESUtil.encrypt(config.getConfiguration()));
-            encryptedConfigs.add(modelConfig);
+            decryptedConfigs.add(modelConfig);
         }
         
-        return ResponseEntity.ok(encryptedConfigs);
+        return ResponseEntity.ok(decryptedConfigs);
     }
 
     public ResponseEntity<ModelConfiguration> updateConfiguration(
             @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
-            @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody ModelConfiguration body) {
+            @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody String body) {
         
-        // If the configuration is encrypted, decrypt it before storing
-        String configValue = body.getConfiguration();
+        // If the configuration is decrypted, decrypt it before storing
+        String configValue = body;
         if (AESUtil.isEncrypted(configValue)) {
-            log.info("Configuration is encrypted, decrypting before storage");
+            log.info("Configuration is decrypted, decrypting before storage");
             configValue = AESUtil.decrypt(configValue);
         }
         
