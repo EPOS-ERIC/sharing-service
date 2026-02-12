@@ -46,7 +46,14 @@ public class ShareApiController implements ShareApi {
         
         String key = body.getId()!=null? body.getId() : UUID.randomUUID().toString();
         
-        Configuration configuration = new Configuration(key, body.getConfiguration());
+        // If the configuration is encrypted, decrypt it before storing
+        String configValue = body.getConfiguration();
+        if (AESUtil.isEncrypted(configValue)) {
+            log.info("Configuration is encrypted, decrypting before storage");
+            configValue = AESUtil.decrypt(configValue);
+        }
+        
+        Configuration configuration = new Configuration(key, configValue);
 
         ConfigurationMethod.saveConfiguration(configuration);
         
@@ -109,7 +116,14 @@ public class ShareApiController implements ShareApi {
             @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
             @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody ModelConfiguration body) {
         
-        Configuration configuration = new Configuration(configurationId, body.getConfiguration());
+        // If the configuration is encrypted, decrypt it before storing
+        String configValue = body.getConfiguration();
+        if (AESUtil.isEncrypted(configValue)) {
+            log.info("Configuration is encrypted, decrypting before storage");
+            configValue = AESUtil.decrypt(configValue);
+        }
+        
+        Configuration configuration = new Configuration(configurationId, configValue);
         
         boolean updated = ConfigurationMethod.updateConfiguration(configuration);
         
@@ -119,7 +133,7 @@ public class ShareApiController implements ShareApi {
         
         ModelConfiguration modelConfiguration = new ModelConfiguration();
         modelConfiguration.setId(configurationId);
-        modelConfiguration.setConfiguration(body.getConfiguration());
+        modelConfiguration.setConfiguration(configValue);
         
         return ResponseEntity.ok(modelConfiguration);
     }
