@@ -56,6 +56,74 @@ public class ConfigurationMethod {
 
 		em.close();
 	}
+
+	public static boolean updateConfiguration(Configuration environment) {
+		Objects.requireNonNull(environment, "The passed configuration is null");
+		Objects.requireNonNull(environment.getId(), "Missing configuration ID");
+		Objects.requireNonNull(environment.getConfiguration(), "Missing configuration");
+
+		EntityManager em = dbService.getEntityManager();
+		em.getTransaction().begin();
+
+		Configurations existing = getOneFromDB(em,
+				Configurations.class,
+				"configurations.findById",
+				"ID", environment.getId());
+
+		if (existing == null) {
+			em.getTransaction().rollback();
+			em.close();
+			return false;
+		}
+
+		existing.setConfiguration(environment.getConfiguration());
+		em.merge(existing);
+
+		em.getTransaction().commit();
+		em.getEntityManagerFactory().getCache().evictAll();
+
+		em.close();
+		return true;
+	}
+
+	public static boolean deleteConfiguration(String id) {
+		Objects.requireNonNull(id, "The passed configuration ID is null");
+
+		EntityManager em = dbService.getEntityManager();
+		em.getTransaction().begin();
+
+		Configurations existing = getOneFromDB(em,
+				Configurations.class,
+				"configurations.findById",
+				"ID", id);
+
+		if (existing == null) {
+			em.getTransaction().rollback();
+			em.close();
+			return false;
+		}
+
+		em.remove(existing);
+
+		em.getTransaction().commit();
+		em.getEntityManagerFactory().getCache().evictAll();
+
+		em.close();
+		return true;
+	}
+
+	public static boolean existsConfiguration(String id) {
+		Objects.requireNonNull(id, "The passed configuration ID is null");
+
+		EntityManager em = dbService.getEntityManager();
+		Configurations existing = getOneFromDB(em,
+				Configurations.class,
+				"configurations.findById",
+				"ID", id);
+		em.close();
+
+		return existing != null;
+	}
 }
 
 

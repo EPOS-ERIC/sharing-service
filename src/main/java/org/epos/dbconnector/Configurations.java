@@ -26,7 +26,7 @@ public class Configurations {
     }
 
     @Basic
-    @Column(name = "configuration", length = 1024)
+    @Column(name = "configuration", columnDefinition = "TEXT")
     public String getConfiguration() {
         return configuration;
     }

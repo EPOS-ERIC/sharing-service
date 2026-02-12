@@ -75,5 +75,48 @@ public interface ShareApi {
             method = RequestMethod.GET)
     ResponseEntity<List<Configuration>> findAllConfigurations();
 
+
+    @Operation(summary = "Retrieve encrypted configuration from database", description = "Retrieve configuration from database and return it encrypted with AES", tags={ "Configuration Sharing Service" })
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
+        @ApiResponse(responseCode = "404", description = "Configuration not found") })
+    @RequestMapping(value = "/share/{instance_id}/encrypted",
+        produces = { "application/json" },
+        method = RequestMethod.GET)
+    ResponseEntity<ModelConfiguration> findConfigurationsByIDEncrypted(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId);
+
+
+    @Operation(summary = "Retrieve all configurations encrypted from database", description = "Retrieve all configurations from database and return them encrypted with AES", tags={ "Configuration Sharing Service" })
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ModelConfiguration.class)))),
+            @ApiResponse(responseCode = "400", description = "Invalid status value") })
+    @RequestMapping(value = "/share/all/encrypted",
+            produces = { "application/json" },
+            method = RequestMethod.GET)
+    ResponseEntity<List<ModelConfiguration>> findAllConfigurationsEncrypted();
+
+
+    @Operation(summary = "Update configuration in database", description = "Update an existing configuration in database", tags={ "Configuration Sharing Service" })
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
+        @ApiResponse(responseCode = "404", description = "Configuration not found"),
+        @ApiResponse(responseCode = "422", description = "Validation exception") })
+    @RequestMapping(value = "/share/{instance_id}",
+        consumes = { "application/json" },
+        produces = { "application/json" },
+        method = RequestMethod.PUT)
+    ResponseEntity<ModelConfiguration> updateConfiguration(
+        @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
+        @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody ModelConfiguration body);
+
+
+    @Operation(summary = "Delete configuration from database", description = "Delete a configuration from database by ID", tags={ "Configuration Sharing Service" })
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Successful operation - no content"),
+        @ApiResponse(responseCode = "404", description = "Configuration not found") })
+    @RequestMapping(value = "/share/{instance_id}",
+        method = RequestMethod.DELETE)
+    ResponseEntity<Void> deleteConfiguration(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId);
+
 }
 

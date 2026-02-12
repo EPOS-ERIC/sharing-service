@@ -9,14 +9,17 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.epos.dbconnector.Configuration;
 import org.epos.dbconnector.ConfigurationMethod;
+import org.epos.dbconnector.util.AESUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,6 +69,69 @@ public class ShareApiController implements ShareApi {
 
     public ResponseEntity<List<Configuration>> findAllConfigurations() {
         return ResponseEntity.ok(ConfigurationMethod.getConfigurations());
+    }
+
+    public ResponseEntity<ModelConfiguration> findConfigurationsByIDEncrypted(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId) {
+        Configuration config = ConfigurationMethod.getConfigurationById(configurationId);
+        
+        if (config == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        String encryptedValue = AESUtil.encrypt(config.getConfiguration());
+        
+        ModelConfiguration modelConfiguration = new ModelConfiguration();
+        modelConfiguration.setId(configurationId);
+        modelConfiguration.setConfiguration(encryptedValue);
+        
+        return ResponseEntity.ok(modelConfiguration);
+    }
+
+    public ResponseEntity<List<ModelConfiguration>> findAllConfigurationsEncrypted() {
+        List<Configuration> configs = ConfigurationMethod.getConfigurations();
+        
+        if (configs == null) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
+        
+        List<ModelConfiguration> encryptedConfigs = new ArrayList<>();
+        for (Configuration config : configs) {
+            ModelConfiguration modelConfig = new ModelConfiguration();
+            modelConfig.setId(config.getId());
+            modelConfig.setConfiguration(AESUtil.encrypt(config.getConfiguration()));
+            encryptedConfigs.add(modelConfig);
+        }
+        
+        return ResponseEntity.ok(encryptedConfigs);
+    }
+
+    public ResponseEntity<ModelConfiguration> updateConfiguration(
+            @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
+            @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody ModelConfiguration body) {
+        
+        Configuration configuration = new Configuration(configurationId, body.getConfiguration());
+        
+        boolean updated = ConfigurationMethod.updateConfiguration(configuration);
+        
+        if (!updated) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        ModelConfiguration modelConfiguration = new ModelConfiguration();
+        modelConfiguration.setId(configurationId);
+        modelConfiguration.setConfiguration(body.getConfiguration());
+        
+        return ResponseEntity.ok(modelConfiguration);
+    }
+
+    public ResponseEntity<Void> deleteConfiguration(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId) {
+        boolean deleted = ConfigurationMethod.deleteConfiguration(configurationId);
+        
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        return ResponseEntity.noContent().build();
     }
 
 }
