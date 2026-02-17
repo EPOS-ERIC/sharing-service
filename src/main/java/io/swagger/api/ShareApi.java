@@ -59,7 +59,7 @@ public interface ShareApi {
         @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
         
         @ApiResponse(responseCode = "400", description = "Invalid status value") })
-    @RequestMapping(value = "/share/{instance_id}",
+    @RequestMapping(value = "/configurations/{instance_id}",
         produces = { "application/json" }, 
         method = RequestMethod.GET)
     ResponseEntity<ModelConfiguration> findConfigurationsByIDEncrypted(@Parameter(in = ParameterIn.PATH, description = "Status values that need to be considered for filter", required=true, schema=@Schema()) @PathVariable("instance_id") String configuration
@@ -80,7 +80,7 @@ public interface ShareApi {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
         @ApiResponse(responseCode = "404", description = "Configuration not found") })
-    @RequestMapping(value = "/share/{instance_id}/decrypted",
+    @RequestMapping(value = "/configurations/{instance_id}/decrypted",
         produces = { "application/json" },
         method = RequestMethod.GET)
     ResponseEntity<String> findConfigurationsByID(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId);
@@ -90,7 +90,7 @@ public interface ShareApi {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ModelConfiguration.class)))),
             @ApiResponse(responseCode = "400", description = "Invalid status value") })
-    @RequestMapping(value = "/share/all/decrypted",
+    @RequestMapping(value = "/configurations/all/decrypted",
             produces = { "application/json" },
             method = RequestMethod.GET)
     ResponseEntity<List<Configuration>> findAllConfigurations();
@@ -101,7 +101,7 @@ public interface ShareApi {
         @ApiResponse(responseCode = "200", description = "Successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
         @ApiResponse(responseCode = "404", description = "Configuration not found"),
         @ApiResponse(responseCode = "422", description = "Validation exception") })
-    @RequestMapping(value = "/share/{instance_id}",
+    @RequestMapping(value = "/configurations/{instance_id}",
         consumes = { "application/json" },
         produces = { "application/json" },
         method = RequestMethod.PUT)
@@ -114,7 +114,7 @@ public interface ShareApi {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Successful operation - no content"),
         @ApiResponse(responseCode = "404", description = "Configuration not found") })
-    @RequestMapping(value = "/share/{instance_id}",
+    @RequestMapping(value = "/configurations/{instance_id}",
         method = RequestMethod.DELETE)
     ResponseEntity<Void> deleteConfiguration(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId);
 
