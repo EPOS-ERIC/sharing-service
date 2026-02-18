@@ -29,8 +29,14 @@ public class AESUtil {
     private static final int SALT_LENGTH = 8;
     private static final int PBKDF2_ITERATIONS = 10000;
 
-    // Internal salt/passphrase for encryption - change manually as needed
+    // Internal passphrase for encryption - change manually as needed
     private static final String INTERNAL_SALT = "fxUoIlLqLVuN";
+    
+    // Fixed salt for deterministic encryption (8 bytes) - used for database storage
+    // This ensures the same plaintext always produces the same ciphertext
+    private static final byte[] FIXED_SALT = new byte[] { 
+        0x76, (byte)0xBF, 0x04, (byte)0xBD, 0x0F, (byte)0xAF, 0x64, 0x5A 
+    };
 
     /**
      * Encrypts plain text using AES-256-CBC with the internal salt.
@@ -87,6 +93,18 @@ public class AESUtil {
     }
 
     /**
+     * Encrypts plain text using AES-256-CBC with the internal passphrase and FIXED salt.
+     * This produces deterministic output - the same plaintext always produces the same ciphertext.
+     * Use this for database storage to ensure consistency.
+     *
+     * @param plainText The text to encrypt
+     * @return Base64 encoded encrypted string in OpenSSL format
+     */
+    public static String encryptDeterministic(String plainText) {
+        return encryptLegacyWithSalt(plainText, INTERNAL_SALT, FIXED_SALT);
+    }
+
+    /**
      * Encrypts plain text using AES-256-CBC with legacy OpenSSL EVP_BytesToKey (MD5-based).
      * Use this for compatibility with older OpenSSL-encrypted data.
      *
@@ -95,11 +113,27 @@ public class AESUtil {
      * @return Base64 encoded encrypted string in OpenSSL format
      */
     public static String encryptLegacy(String plainText, String passphrase) {
+        // Generate random salt
+        byte[] salt = new byte[SALT_LENGTH];
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(salt);
+        return encryptLegacyWithSalt(plainText, passphrase, salt);
+    }
+
+    /**
+     * Encrypts plain text using AES-256-CBC with legacy OpenSSL EVP_BytesToKey (MD5-based)
+     * using a specific salt. This allows for deterministic encryption when the same salt is used.
+     *
+     * @param plainText  The text to encrypt
+     * @param passphrase The passphrase to use for encryption
+     * @param salt       The 8-byte salt to use
+     * @return Base64 encoded encrypted string in OpenSSL format
+     */
+    public static String encryptLegacyWithSalt(String plainText, String passphrase, byte[] salt) {
         try {
-            // Generate random salt
-            byte[] salt = new byte[SALT_LENGTH];
-            SecureRandom secureRandom = new SecureRandom();
-            secureRandom.nextBytes(salt);
+            if (salt.length != SALT_LENGTH) {
+                throw new IllegalArgumentException("Salt must be " + SALT_LENGTH + " bytes");
+            }
 
             // Derive key and IV using EVP_BytesToKey (MD5-based, legacy)
             byte[][] keyAndIv = deriveKeyAndIvEVP(passphrase, salt);
@@ -127,6 +161,23 @@ public class AESUtil {
         } catch (Exception e) {
             throw new RuntimeException("Error encrypting data (legacy)", e);
         }
+    }
+
+    /**
+     * Extracts the salt from an OpenSSL-formatted encrypted string.
+     *
+     * @param encryptedText Base64 encoded encrypted string
+     * @return The 8-byte salt
+     */
+    public static byte[] extractSalt(String encryptedText) {
+        byte[] decoded = Base64.getDecoder().decode(encryptedText);
+        byte[] saltedPrefix = SALTED_PREFIX.getBytes(StandardCharsets.US_ASCII);
+        
+        if (decoded.length < saltedPrefix.length + SALT_LENGTH) {
+            throw new IllegalArgumentException("Invalid encrypted data: too short");
+        }
+        
+        return Arrays.copyOfRange(decoded, saltedPrefix.length, saltedPrefix.length + SALT_LENGTH);
     }
 
     /**

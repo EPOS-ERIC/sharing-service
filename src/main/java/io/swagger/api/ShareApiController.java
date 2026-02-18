@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.epos.dbconnector.Configuration;
 import org.epos.dbconnector.ConfigurationMethod;
 import org.epos.dbconnector.util.AESUtil;
+import org.epos.dbconnector.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -46,36 +47,58 @@ public class ShareApiController implements ShareApi {
         
         String key = body.getId()!=null? body.getId() : UUID.randomUUID().toString();
         
-        // If the configuration is decrypted, decrypt it before storing
+        // Get the configuration value - decrypt if it comes encrypted
         String configValue = body.getConfiguration();
         if (AESUtil.isEncrypted(configValue)) {
-            log.info("Configuration is encrypted, decrypting before storage");
+            log.info("Configuration is encrypted, will re-encrypt with fixed salt for storage");
             configValue = AESUtil.decrypt(configValue);
         }
         
-        Configuration configuration = new Configuration(key, configValue);
+        // Always store encrypted with fixed salt for deterministic storage
+        String encryptedValue = AESUtil.encryptDeterministic(configValue);
+        Configuration configuration = new Configuration(key, encryptedValue);
 
         ConfigurationMethod.saveConfiguration(configuration);
         
         KeyCreated keyCreated = new KeyCreated();
         keyCreated.setKey(key);
         
-		return ResponseEntity.ok(keyCreated);
+        return ResponseEntity.ok(keyCreated);
     }
 
     public ResponseEntity<String> findConfigurationsByID(@Parameter(in = ParameterIn.PATH, description = "Status values that need to be considered for filter", required=true, schema=@Schema()) @PathVariable("instance_id") String configuration
 ) {
+        Configuration config = ConfigurationMethod.getConfigurationById(configuration);
         
-        String configurationValue = ConfigurationMethod.getConfigurationById(configuration).getConfiguration();
+        if (config == null) {
+            return ResponseEntity.notFound().build();
+        }
         
-        ModelConfiguration modelConfiguration = new ModelConfiguration();
-        modelConfiguration.setConfiguration(configurationValue);
+        // Decrypt the stored value, then normalize for readable output
+        String decryptedValue = AESUtil.decrypt(config.getConfiguration());
+        String normalizedValue = JsonUtil.normalize(decryptedValue);
         
-        return ResponseEntity.ok(modelConfiguration.getConfiguration());
+        return ResponseEntity.ok(normalizedValue);
     }
 
-    public ResponseEntity<List<Configuration>> findAllConfigurations() {
-        return ResponseEntity.ok(ConfigurationMethod.getConfigurations());
+    public ResponseEntity<List<ModelConfiguration>> findAllConfigurations() {
+        List<Configuration> configs = ConfigurationMethod.getConfigurations();
+        
+        if (configs == null) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
+        
+        // Decrypt and normalize each configuration for readable output
+        List<ModelConfiguration> normalizedConfigs = new ArrayList<>();
+        for (Configuration config : configs) {
+            ModelConfiguration modelConfig = new ModelConfiguration();
+            modelConfig.setId(config.getId());
+            String decryptedValue = AESUtil.decrypt(config.getConfiguration());
+            modelConfig.setConfiguration(JsonUtil.normalize(decryptedValue));
+            normalizedConfigs.add(modelConfig);
+        }
+        
+        return ResponseEntity.ok(normalizedConfigs);
     }
 
     public ResponseEntity<ModelConfiguration> findConfigurationsByIDEncrypted(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId) {
@@ -85,11 +108,10 @@ public class ShareApiController implements ShareApi {
             return ResponseEntity.notFound().build();
         }
         
-        String encryptedValue = AESUtil.encrypt(config.getConfiguration());
-        
+        // Return the encrypted value directly from the database
         ModelConfiguration modelConfiguration = new ModelConfiguration();
         modelConfiguration.setId(configurationId);
-        modelConfiguration.setConfiguration(encryptedValue);
+        modelConfiguration.setConfiguration(config.getConfiguration());
         
         return ResponseEntity.ok(modelConfiguration);
     }
@@ -101,29 +123,30 @@ public class ShareApiController implements ShareApi {
             return ResponseEntity.ok(new ArrayList<>());
         }
         
-        List<ModelConfiguration> decryptedConfigs = new ArrayList<>();
+        // Return the encrypted values directly from the database
+        List<ModelConfiguration> encryptedConfigs = new ArrayList<>();
         for (Configuration config : configs) {
             ModelConfiguration modelConfig = new ModelConfiguration();
             modelConfig.setId(config.getId());
-            modelConfig.setConfiguration(AESUtil.encrypt(config.getConfiguration()));
-            decryptedConfigs.add(modelConfig);
+            modelConfig.setConfiguration(config.getConfiguration());
+            encryptedConfigs.add(modelConfig);
         }
         
-        return ResponseEntity.ok(decryptedConfigs);
+        return ResponseEntity.ok(encryptedConfigs);
     }
 
     public ResponseEntity<ModelConfiguration> updateConfiguration(
             @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
             @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody String body) {
         
-        // If the configuration is decrypted, decrypt it before storing
-        String configValue = body;
-        if (AESUtil.isEncrypted(configValue)) {
-            log.info("Configuration is decrypted, decrypting before storage");
-            configValue = AESUtil.decrypt(configValue);
-        }
+        // The configurations endpoint receives normalized JSON, denormalize it for storage format
+        String denormalizedValue = JsonUtil.denormalize(body, true);
+        log.info("Denormalized configuration for storage");
         
-        Configuration configuration = new Configuration(configurationId, configValue);
+        // Encrypt with fixed salt for deterministic storage
+        String encryptedValue = AESUtil.encryptDeterministic(denormalizedValue);
+        
+        Configuration configuration = new Configuration(configurationId, encryptedValue);
         
         boolean updated = ConfigurationMethod.updateConfiguration(configuration);
         
@@ -131,9 +154,10 @@ public class ShareApiController implements ShareApi {
             return ResponseEntity.notFound().build();
         }
         
+        // Return the normalized version back to the client
         ModelConfiguration modelConfiguration = new ModelConfiguration();
         modelConfiguration.setId(configurationId);
-        modelConfiguration.setConfiguration(configValue);
+        modelConfiguration.setConfiguration(body);
         
         return ResponseEntity.ok(modelConfiguration);
     }

@@ -223,6 +223,15 @@ class JsonUtilTest {
             // Step 4: Verify no escaped quotes remain
             assertFalse(normalized.contains("\\\""), "Should not contain escaped quotes");
             assertFalse(normalized.contains("\\\\\\\""), "Should not contain double-escaped quotes");
+
+            // Step 5: Test encryption round-trip (without normalization) produces identical output
+            // Note: normalize/denormalize transforms the JSON structure for readability,
+            // so it cannot produce byte-identical output. Instead, test that:
+            // 1. The original can be re-encrypted identically using the same salt
+            // 2. The normalized form preserves all data (tested above via structure checks)
+            byte[] originalSalt = AESUtil.extractSalt(ENCRYPTED_SAMPLE);
+            String reEncrypted = AESUtil.encryptLegacyWithSalt(decrypted, INTERNAL_SALT, originalSalt);
+            assertEquals(ENCRYPTED_SAMPLE, reEncrypted, "Re-encrypting original decrypted data with same salt should produce identical output");
         }
     }
 }

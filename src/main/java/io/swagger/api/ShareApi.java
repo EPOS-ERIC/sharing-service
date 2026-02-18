@@ -76,27 +76,27 @@ public interface ShareApi {
     ResponseEntity<List<ModelConfiguration>> findAllConfigurationsEncrypted();
 
 
-    @Operation(summary = "Retrieve decrypted configuration from database", description = "Retrieve configuration from database and return it decrypted with AES", tags={ "Configuration Sharing Service" })
+    @Operation(summary = "Retrieve normalized configuration from database", description = "Retrieve configuration from database and return it as normalized (plain, readable) JSON", tags={ "Configuration Sharing Service" })
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
+        @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = String.class))),
         @ApiResponse(responseCode = "404", description = "Configuration not found") })
-    @RequestMapping(value = "/configurations/{instance_id}/decrypted",
+    @RequestMapping(value = "/configurations/{instance_id}",
         produces = { "application/json" },
         method = RequestMethod.GET)
     ResponseEntity<String> findConfigurationsByID(@Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId);
 
 
-    @Operation(summary = "Retrieve all configurations decrypted from database", description = "Retrieve all configurations from database and return them decrypted with AES", tags={ "Configuration Sharing Service" })
+    @Operation(summary = "Retrieve all configurations normalized from database", description = "Retrieve all configurations from database and return them as normalized (plain, readable) JSON", tags={ "Configuration Sharing Service" })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ModelConfiguration.class)))),
             @ApiResponse(responseCode = "400", description = "Invalid status value") })
-    @RequestMapping(value = "/configurations/all/decrypted",
+    @RequestMapping(value = "/configurations/all",
             produces = { "application/json" },
             method = RequestMethod.GET)
-    ResponseEntity<List<Configuration>> findAllConfigurations();
+    ResponseEntity<List<ModelConfiguration>> findAllConfigurations();
 
 
-    @Operation(summary = "Update configuration in database", description = "Update an existing configuration in database", tags={ "Configuration Sharing Service" })
+    @Operation(summary = "Update configuration in database", description = "Update an existing configuration in database. Accepts normalized (plain) JSON and stores it in denormalized format.", tags={ "Configuration Sharing Service" })
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
         @ApiResponse(responseCode = "404", description = "Configuration not found"),
@@ -107,7 +107,7 @@ public interface ShareApi {
         method = RequestMethod.PUT)
     ResponseEntity<ModelConfiguration> updateConfiguration(
         @Parameter(in = ParameterIn.PATH, description = "Configuration ID", required=true, schema=@Schema()) @PathVariable("instance_id") String configurationId,
-        @Parameter(in = ParameterIn.DEFAULT, description = "Configuration", required=true, schema=@Schema()) @Valid @RequestBody String body);
+        @Parameter(in = ParameterIn.DEFAULT, description = "Normalized JSON configuration", required=true, schema=@Schema()) @Valid @RequestBody String body);
 
 
     @Operation(summary = "Delete configuration from database", description = "Delete a configuration from database by ID", tags={ "Configuration Sharing Service" })
