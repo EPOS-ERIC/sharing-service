@@ -59,7 +59,7 @@ public interface ShareApi {
         @ApiResponse(responseCode = "200", description = "successful operation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ModelConfiguration.class))),
         
         @ApiResponse(responseCode = "400", description = "Invalid status value") })
-    @RequestMapping(value = "/configurations/{instance_id}",
+    @RequestMapping(value = "/share/{instance_id}",
         produces = { "application/json" }, 
         method = RequestMethod.GET)
     ResponseEntity<ModelConfiguration> findConfigurationsByIDEncrypted(@Parameter(in = ParameterIn.PATH, description = "Status values that need to be considered for filter", required=true, schema=@Schema()) @PathVariable("instance_id") String configuration
